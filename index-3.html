@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abschlussreise 2027 – Unterkunft wählen</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root {
+    --paper: #F3F7F8;
+    --surface: #FFFFFF;
+    --ink: #12263F;
+    --muted: #55677A;
+    --line: #D5E0E4;
+    --pool: #1B93A7;
+    --pool-deep: #0F6878;
+    --sun: #F2B330;
+    --sun-edge: #C98A0C;
+    --sun-soft: #FCEDC6;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0E1A28;
+      --surface: #15263A;
+      --ink: #EAF1F4;
+      --muted: #9EB0C1;
+      --line: #263A51;
+      --pool: #187F91;
+      --pool-deep: #7FD3E0;
+      --sun-soft: #3A3120;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+    padding-bottom: 140px;
+  }
+  img { max-width: 100%; display: block; }
+  a { color: var(--pool-deep); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+  /* Hero */
+  .hero {
+    background: var(--pool);
+    color: #fff;
+    padding: 64px 0 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    width: 360px; height: 360px;
+    right: -90px; top: -120px;
+    border-radius: 50%;
+    background: var(--sun);
+    box-shadow: 0 0 0 28px rgba(242,179,48,.25), 0 0 0 60px rgba(242,179,48,.12);
+  }
+  .hero .wrap { position: relative; }
+  .hero h1 {
+    font-size: clamp(2.8rem, 9vw, 6rem);
+    line-height: .92;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    margin: 0 0 20px;
+    max-width: 9ch;
+  }
+  .hero .dates { font-size: 1.3rem; font-weight: 600; margin: 0 0 10px; }
+  .hero .intro { max-width: 52ch; margin: 0; color: rgba(255,255,255,.92); }
+
+  .demo {
+    background: var(--sun-soft);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 0;
+    font-size: .95rem;
+  }
+
+  section { padding-top: 48px; }
+  h2.section { font-size: 1.7rem; line-height: 1.15; margin: 0 0 6px; font-weight: 800; letter-spacing: -.01em; }
+  .lead { color: var(--muted); margin: 0 0 20px; max-width: 60ch; }
+
+  /* Map */
+  #map {
+    height: 420px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    z-index: 0;
+  }
+  .pin {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    border: 3px solid #fff;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.35);
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  }
+  .leaflet-popup-content { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: 15px; }
+  .leaflet-popup-content strong { display: block; margin-bottom: 4px; }
+
+  /* Stay cards */
+  .stay {
+    display: grid;
+    grid-template-columns: 1fr;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 32px;
+    scroll-margin-top: 20px;
+  }
+  @media (min-width: 900px) {
+    .stay { grid-template-columns: 1.1fr 1fr; }
+    .stay .media { aspect-ratio: auto; min-height: 100%; }
+  }
+  .media { position: relative; aspect-ratio: 4 / 3; background: var(--line); }
+  .gallery {
+    position: absolute; inset: 0;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .gallery::-webkit-scrollbar { display: none; }
+  .gallery img, .gallery .noimg {
+    flex: 0 0 100%;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    scroll-snap-align: start;
+  }
+  .noimg { display: grid; place-items: center; color: var(--muted); padding: 20px; text-align: center; }
+  .gnav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 0; background: rgba(255,255,255,.9); color: #12263F;
+    font-size: 22px; line-height: 1; cursor: pointer;
+    display: grid; place-items: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  }
+  .gnav.prev { left: 12px; } .gnav.next { right: 12px; }
+  .gcount {
+    position: absolute; right: 12px; bottom: 12px;
+    background: rgba(18,38,63,.8); color: #fff;
+    font-size: .85rem; padding: 2px 10px; border-radius: 99px;
+  }
+
+  .body { padding: 24px 24px 26px; display: flex; flex-direction: column; gap: 16px; }
+  .titlebar { display: flex; gap: 14px; align-items: flex-start; }
+  .titlebar .pin { flex: 0 0 auto; border-color: var(--surface); box-shadow: none; }
+  .titlebar h3 { margin: 0; font-size: 1.45rem; line-height: 1.15; font-weight: 800; }
+  .place { margin: 2px 0 0; color: var(--muted); }
+  .summary { margin: 0; max-width: 60ch; }
+
+  .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0; }
+  @media (min-width: 520px) { .facts { grid-template-columns: repeat(4, 1fr); } }
+  .facts div { background: var(--paper); border-radius: 12px; padding: 10px 12px; }
+  .facts dt { font-size: .82rem; color: var(--muted); }
+  .facts dd { margin: 0; font-size: 1.3rem; font-weight: 800; line-height: 1.2; }
+
+  .perks { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .perks li { border: 1px solid var(--line); border-radius: 99px; padding: 3px 12px; font-size: .92rem; }
+
+  .info { margin: 0; font-size: .95rem; }
+  .info b { font-weight: 600; }
+  .warn { background: var(--sun-soft); border-radius: 12px; padding: 10px 14px; font-size: .95rem; margin: 0; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn {
+    font: inherit; font-weight: 600; font-size: .95rem;
+    padding: 9px 16px; border-radius: 99px; cursor: pointer;
+    border: 1px solid var(--ink); background: transparent; color: var(--ink);
+    text-decoration: none; display: inline-block;
+  }
+  .btn.primary { background: var(--ink); color: var(--paper); }
+
+  /* Rating */
+  .rate { border: 2px solid var(--pool); border-radius: 16px; padding: 12px 16px 14px; margin: 4px 0 0; }
+  .rate legend { font-weight: 800; padding: 0 6px; }
+  .rate .row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .sun { position: relative; cursor: pointer; color: var(--muted); padding: 2px; }
+  .sun input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .sun svg { width: 40px; height: 40px; display: block; border-radius: 50%; }
+  .sun svg circle { fill: none; }
+  .sun.on { color: var(--sun-edge); }
+  .sun.on svg circle { fill: var(--sun); }
+  .sun input:focus-visible + svg { outline: 3px solid var(--pool); outline-offset: 2px; }
+  .ratelabel { margin-left: 8px; color: var(--muted); font-size: .95rem; min-width: 9ch; }
+  .clear { font: inherit; font-size: .85rem; background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; margin-left: auto; }
+
+  /* Results */
+  .results { display: flex; flex-direction: column; gap: 12px; }
+  .res {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 6px 14px; align-items: center;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 16px; padding: 14px 18px;
+  }
+  .res.top { border: 2px solid var(--sun-edge); background: var(--sun-soft); }
+  .res .name { font-weight: 600; }
+  .res .score { font-size: 1.5rem; font-weight: 800; text-align: right; }
+  .res .bar { grid-column: 2 / 4; height: 10px; background: var(--paper); border-radius: 99px; overflow: hidden; }
+  .res .bar span { display: block; height: 100%; background: var(--pool); border-radius: 99px; }
+  .res.top .bar span { background: var(--sun-edge); }
+  .res small { color: var(--muted); grid-column: 2 / 4; }
+  .voters { color: var(--muted); margin-top: 16px; font-size: .95rem; }
+  .empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 16px; padding: 22px; color: var(--muted); }
+
+  /* Vote bar */
+  .votebar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
+    background: #12263F; color: #fff;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 20px rgba(0,0,0,.18);
+  }
+  .votebar form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .votebar label { font-weight: 600; }
+  .votebar input[type=text] {
+    font: inherit; padding: 9px 14px; border-radius: 99px; border: 0;
+    min-width: 0; flex: 1 1 160px; max-width: 280px;
+    background: #fff; color: #12263F;
+  }
+  .votebar button {
+    font: inherit; font-weight: 800; padding: 9px 20px; border-radius: 99px; border: 0;
+    background: var(--sun); color: #12263F; cursor: pointer;
+  }
+  .votebar button:disabled { opacity: .6; cursor: default; }
+  .votebar .status { flex: 1 1 100%; font-size: .9rem; color: #C9D6E2; margin: 0; min-height: 1.2em; }
+  @media (min-width: 760px) { .votebar .status { flex: 1 1 auto; } }
+
+  :focus-visible { outline: 3px solid var(--pool); outline-offset: 2px; }
+  footer { color: var(--muted); font-size: .85rem; padding: 40px 0 0; }
+</style>
+</head>
+<body>
+
+<div class="demo" id="demo" hidden>
+  <div class="wrap">Testmodus: Stimmen werden nur in diesem Browser gespeichert. Damit alle gemeinsam abstimmen können, trage die Firebase-Daten im Code ein (siehe README).</div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Abschluss&shy;reise 2027</h1>
+    <p class="dates">Montag, 19. bis Sonntag, 25. Juli 2027 – 6 Nächte</p>
+    <p class="intro">Schau dir die Unterkünfte an und gib jeder 1 bis 5 Sonnen. Unten deinen Namen eintragen und speichern. Die Unterkunft mit dem besten Durchschnitt gewinnt.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="karte" aria-labelledby="h-karte">
+    <h2 class="section" id="h-karte">Wo liegen die Unterkünfte?</h2>
+    <p class="lead">Die Punkte sind ungefähre Standorte – die genaue Adresse gibt es meist erst nach der Buchung.</p>
+    <div id="map" role="region" aria-label="Karte mit allen Unterkünften"></div>
+  </section>
+
+  <section id="unterkuenfte" aria-labelledby="h-liste">
+    <h2 class="section" id="h-liste">Die Unterkünfte</h2>
+    <p class="lead">Wische durch die Fotos, vergleiche die wichtigsten Infos und bewerte jede Unterkunft.</p>
+    <div id="liste"></div>
+  </section>
+
+  <section id="resultat" aria-labelledby="h-res">
+    <h2 class="section" id="h-res">Zwischenstand</h2>
+    <p class="lead">Sortiert nach durchschnittlicher Bewertung. Aktualisiert sich live, sobald jemand abstimmt.</p>
+    <div id="results" class="results" aria-live="polite"></div>
+    <p class="voters" id="voters"></p>
+  </section>
+
+  <footer>Kartendaten © OpenStreetMap-Mitwirkende. Fotos und Infos stammen aus den verlinkten Inseraten.</footer>
+</main>
+
+<div class="votebar">
+  <form class="wrap" id="voteform">
+    <label for="name">Dein Name</label>
+    <input type="text" id="name" maxlength="30" autocomplete="given-name" placeholder="z. B. Lea" required>
+    <button type="submit" id="save">Stimme speichern</button>
+    <p class="status" id="status" role="status"></p>
+  </form>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script type="module">
+/* ============================================================
+   1) FIREBASE: Hier deine Konfiguration einfügen (siehe README).
+      Solange hier null steht, läuft die Seite im Testmodus.
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBExssbib4FrmNksdARuYceQ7lyQXXyCD4",
+  authDomain: "abschlussreise-eeu2027.firebaseapp.com",
+  projectId: "abschlussreise-eeu2027",
+  storageBucket: "abschlussreise-eeu2027.firebasestorage.app",
+  messagingSenderId: "781164252554",
+  appId: "1:781164252554:web:49eb5141f317a2020b4c73"
+};
+/* Beispiel:
+const FIREBASE_CONFIG = {
+  apiKey: "AIza...",
+  authDomain: "abschlussreise-xyz.firebaseapp.com",
+  projectId: "abschlussreise-xyz",
+  storageBucket: "abschlussreise-xyz.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
+};
+*/
+
+/* ============================================================
+   2) UNTERKÜNFTE: Neue Unterkunft = ein Objekt kopieren und
+      anpassen. Die id muss eindeutig sein und darf sich nach
+      Start der Abstimmung nicht mehr ändern.
+   ============================================================ */
+const UNTERKUENFTE = [
+  {
+    id: "arenys-munt",
+    titel: "Grosses Haus mit Pool in Strandnähe",
+    ort: "Arenys de Munt, Katalonien, Spanien",
+    lat: 41.6127, lng: 2.5406,
+    link: "https://www.airbnb.ch/rooms/866346104343914065",
+    quelle: "Airbnb",
+    zusammenfassung: "Riesiges Haus auf vier Etagen an der Costa Maresme mit Meer- und Bergblick, rund 40 km von Barcelona. Grosser Pool, Garten mit Grill und Feuerstelle, Spielzimmer. Strände, Dorf mit Bars und der Hafen sind nah.",
+    gaeste: "16 – 28",
+    schlafzimmer: 7,
+    baeder: 6,
+    bewertung: "4.85 (40)",
+    extras: ["Pool", "Meer- und Bergblick", "Grill & Feuerstelle", "Tischtennis", "Darts & Töggelikasten", "3 Parkplätze", "Superhost"],
+    infos: [
+      ["Betten", "6 Doppelzimmer, Dachboden mit 8 Einzelbetten, dazu mehrere Schlafsofas"],
+      ["Inklusive", "Strom, Wasser, Bettwäsche, Handtücher, WLAN, Endreinigung"],
+      ["Preis", "Für unsere Daten direkt im Inserat prüfen"]
+    ],
+    achtung: "Ab 16 Personen kostet jede weitere Person 80 € extra. Dazu kommen Kurtaxe und 600 € Kaution (rückzahlbar).",
+    bilder: [
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-866346104343914065/original/d88629d4-c33e-4bbe-a9c9-f7da55ed49b7.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-866346104343914065/original/3537c2ed-4132-4742-8498-6d040bd4efb3.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/miso/Hosting-866346104343914065/original/ae987452-cec1-49d9-a614-bbf9b047c934.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-866346104343914065/original/ed9a0bf3-302b-4601-bd4b-8308848272b6.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-866346104343914065/original/51eb789e-1e0e-450e-82b2-3d2f13edc4e2.jpeg?im_w=960"
+    ]
+  },
+  {
+    id: "arenys-mar",
+    titel: "El Mirador – Villa mit Meerblick-Pool",
+    ort: "Arenys de Mar, Katalonien, Spanien",
+    lat: 41.5838, lng: 2.5475,
+    link: "https://www.airbnb.ch/rooms/1343318358704670607",
+    quelle: "Airbnb",
+    zusammenfassung: "Rustikale katalanische Villa mit Terrakottaböden und Holzbalken, ein paar Minuten von Stränden und Hafen. Privater Pool mit Meerblick, Terrassen und Garten. Alle Zimmer mit Klimaanlage.",
+    gaeste: "16+",
+    schlafzimmer: 6,
+    baeder: 5,
+    bewertung: "4.76 (17)",
+    extras: ["Pool mit Meerblick", "Klimaanlage", "Kamin", "Terrassen & Garten", "Ruhige Lage"],
+    infos: [
+      ["Betten", "1 Doppelzimmer, mehrere Zweibettzimmer, 2 Zimmer mit je 2 Etagenbetten"],
+      ["Check-in", "16 bis 20 Uhr"],
+      ["Preis", "Für unsere Daten direkt im Inserat prüfen"]
+    ],
+    achtung: "Partys und Lärm sind laut Hausregeln nicht erlaubt. Vor der Buchung muss man den Vermieter kontaktieren. Plus Kurtaxe und Kaution.",
+    bilder: [
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-1343318358704670607/original/36a80e92-103a-4800-b85d-5ca947e05b2c.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-1343318358704670607/original/7dbe2370-c739-494e-bb21-62d982042ee5.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-1343318358704670607/original/a90f68ff-eb2f-4dc2-8438-7850005c952c.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-1343318358704670607/original/ad06bc37-a6fd-407e-a1e4-2e85b0f4ae96.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-1343318358704670607/original/1b67935e-3702-4050-8f12-ab6725485fda.jpeg?im_w=960",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-1343318358704670607/original/cdf18392-27af-4357-aeb0-22c2f1651276.jpeg?im_w=960"
+    ]
+  },
+  {
+    id: "biribino",
+    titel: "Villa «Kloster Biribino»",
+    ort: "Piosina bei Città di Castello, Umbrien, Italien",
+    lat: 43.4925, lng: 12.2190,
+    link: "https://www.interhome.ch/rental/080b95fed23623d8231e6e1e25b4d286",
+    quelle: "Interhome",
+    zusammenfassung: "Ehemaliges Kloster an der Grenze Umbrien/Toskana, das man komplett für sich hat. Haupthaus und Nebenhaus auf einem eingezäunten Gelände von rund 4000 m², mit mehreren Pools und Whirlpools. Kein Meer, dafür Florenz und Siena in etwa 1½ Stunden.",
+    gaeste: "bis 25",
+    schlafzimmer: 10,
+    baeder: 12,
+    bewertung: "–",
+    extras: ["3 Aussenpools", "Whirlpools (4 Zimmer mit Jacuzzi)", "Grill & Pizzaofen", "Klimaanlage", "Tennisplätze nebenan", "Velos"],
+    infos: [
+      ["Betten", "Fast nur Doppelbetten (1,80 m), dazu einige Einzelbetten"],
+      ["Inklusive", "Bettwäsche, Handtücher, Strom, Endreinigung"],
+      ["Preis", "Richtwert ca. 1'225 € pro Nacht (andere Plattform) – im Inserat prüfen"]
+    ],
+    achtung: "Liegt im Landesinneren, zum Meer ist es weit. Fotos stammen von einer anderen Vermietungsseite derselben Villa.",
+    bilder: [
+      "https://www.summerinitaly.com/images/photos/houses/2574_L29758_110667.jpg",
+      "https://www.summerinitaly.com/images/photos/houses/2574_L29759_110728.jpg",
+      "https://www.summerinitaly.com/images/photos/houses/2574_L29758_110668.jpg",
+      "https://www.summerinitaly.com/images/photos/houses/2574_L30379_110669.jpg",
+      "https://www.summerinitaly.com/images/photos/houses/2574_L29760_110655.jpg",
+      "https://www.summerinitaly.com/images/photos/houses/2574_L30380_110677.jpg"
+    ]
+  }
+];
+
+/* ============================================================
+   Ab hier muss nichts mehr angepasst werden.
+   ============================================================ */
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const LABELS = ["", "geht gar nicht", "eher nein", "okay", "gut", "unbedingt!"];
+const state = { mine: {}, votes: [], store: null };
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const slug = (s) => s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const setStatus = (t) => { $("#status").textContent = t; };
+
+function sunSvg() {
+  const rays = [0, 45, 90, 135, 180, 225, 270, 315]
+    .map(a => `<line x1="16" y1="2.5" x2="16" y2="6.5" transform="rotate(${a} 16 16)"/>`).join("");
+  return `<svg viewBox="0 0 32 32" aria-hidden="true"><g stroke="currentColor" stroke-width="2.2" stroke-linecap="round">${rays}</g><circle cx="16" cy="16" r="7" stroke="currentColor" stroke-width="2.2"/></svg>`;
+}
+
+/* ---------- Unterkünfte anzeigen ---------- */
+function renderStays() {
+  $("#liste").innerHTML = UNTERKUENFTE.map((u, i) => `
+    <article class="stay" id="stay-${u.id}">
+      <div class="media">
+        <div class="gallery" tabindex="0" aria-label="Fotos von ${esc(u.titel)}">
+          ${u.bilder.map((src, n) => `<img src="${src}" alt="${esc(u.titel)}, Foto ${n + 1}" loading="lazy" referrerpolicy="no-referrer">`).join("")
+            || `<div class="noimg">Keine Fotos – siehe Inserat</div>`}
+        </div>
+        ${u.bilder.length > 1 ? `
+          <button class="gnav prev" type="button" aria-label="Vorheriges Foto">‹</button>
+          <button class="gnav next" type="button" aria-label="Nächstes Foto">›</button>
+          <span class="gcount">1 / ${u.bilder.length}</span>` : ""}
+      </div>
+      <div class="body">
+        <div class="titlebar">
+          <span class="pin" aria-hidden="true">${LETTERS[i]}</span>
+          <div>
+            <h3>${esc(u.titel)}</h3>
+            <p class="place">${esc(u.ort)}</p>
+          </div>
+        </div>
+        <p class="summary">${esc(u.zusammenfassung)}</p>
+        <dl class="facts">
+          <div><dt>Gäste</dt><dd>${esc(u.gaeste)}</dd></div>
+          <div><dt>Schlafzimmer</dt><dd>${esc(u.schlafzimmer)}</dd></div>
+          <div><dt>Bäder</dt><dd>${esc(u.baeder)}</dd></div>
+          <div><dt>Bewertung</dt><dd>${u.bewertung === "–" ? "–" : "★ " + esc(u.bewertung)}</dd></div>
+        </dl>
+        <ul class="perks">${u.extras.map(e => `<li>${esc(e)}</li>`).join("")}</ul>
+        ${u.infos.map(([k, v]) => `<p class="info"><b>${esc(k)}:</b> ${esc(v)}</p>`).join("")}
+        ${u.achtung ? `<p class="warn">${esc(u.achtung)}</p>` : ""}
+        <div class="actions">
+          <a class="btn primary" href="${u.link}" target="_blank" rel="noopener">Inserat auf ${esc(u.quelle)} öffnen</a>
+          <button class="btn" type="button" data-fly="${i}">Auf der Karte zeigen</button>
+        </div>
+        <fieldset class="rate" data-id="${u.id}">
+          <legend>Deine Bewertung</legend>
+          <div class="row">
+            ${[1, 2, 3, 4, 5].map(n => `
+              <label class="sun" title="${n} – ${LABELS[n]}">
+                <input type="radio" name="rate-${u.id}" value="${n}" aria-label="${n} von 5 Sonnen, ${LABELS[n]}">
+                ${sunSvg()}
+              </label>`).join("")}
+            <span class="ratelabel">noch offen</span>
+            <button type="button" class="clear">zurücksetzen</button>
+          </div>
+        </fieldset>
+      </div>
+    </article>`).join("");
+
+  // Galerie-Navigation
+  document.querySelectorAll(".media").forEach(m => {
+    const g = $(".gallery", m), count = $(".gcount", m);
+    const total = g.children.length;
+    const step = (dir) => g.scrollBy({ left: dir * g.clientWidth, behavior: "smooth" });
+    $(".prev", m)?.addEventListener("click", () => step(-1));
+    $(".next", m)?.addEventListener("click", () => step(1));
+    g.addEventListener("scroll", () => {
+      if (count) count.textContent = `${Math.round(g.scrollLeft / g.clientWidth) + 1} / ${total}`;
+    }, { passive: true });
+    g.querySelectorAll("img").forEach(img => img.addEventListener("error", () => {
+      const d = document.createElement("div");
+      d.className = "noimg";
+      d.textContent = "Foto konnte nicht geladen werden – siehe Inserat";
+      img.replaceWith(d);
+    }));
+  });
+
+  // Bewertung
+  document.querySelectorAll(".rate").forEach(fs => {
+    const id = fs.dataset.id;
+    fs.addEventListener("change", e => {
+      state.mine[id] = Number(e.target.value);
+      paintRating(fs);
+    });
+    $(".clear", fs).addEventListener("click", () => {
+      delete state.mine[id];
+      fs.querySelectorAll("input").forEach(r => r.checked = false);
+      paintRating(fs);
+    });
+  });
+}
+
+function paintRating(fs) {
+  const v = state.mine[fs.dataset.id] || 0;
+  fs.querySelectorAll(".sun").forEach((lab, idx) => {
+    lab.classList.toggle("on", idx < v);
+    $("input", lab).checked = idx + 1 === v;
+  });
+  $(".ratelabel", fs).textContent = v ? `${v}/5 – ${LABELS[v]}` : "noch offen";
+}
+const paintAll = () => document.querySelectorAll(".rate").forEach(paintRating);
+
+/* ---------- Karte ---------- */
+let map, markers = [];
+function renderMap() {
+  map = L.map("map", { scrollWheelZoom: false });
+  // Online (GitHub Pages) wird OpenStreetMap verwendet, lokal (file://) Esri,
+  // weil OpenStreetMap lokale Dateien blockiert. Schlägt ein Dienst fehl,
+  // wird automatisch der andere genommen.
+  const TILES = {
+    osm: {
+      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      opt: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }
+    },
+    esri: {
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      opt: { maxZoom: 19, attribution: 'Karte &copy; Esri, Daten &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> u. a.' }
+    }
+  };
+  const order = location.protocol === "file:" ? ["esri", "osm"] : ["osm", "esri"];
+  let k = 0, layer = null;
+  const useTiles = () => {
+    if (layer) map.removeLayer(layer);
+    const t = TILES[order[k]];
+    let loaded = false, errors = 0;
+    layer = L.tileLayer(t.url, t.opt).addTo(map);
+    layer.on("tileload", () => { loaded = true; });
+    layer.on("tileerror", () => {
+      if (!loaded && ++errors >= 3 && k < order.length - 1) { k++; useTiles(); }
+    });
+  };
+  useTiles();
+  // Pin-Symbol; dx verschiebt den Pin nach rechts, falls er sonst einen anderen verdecken würde.
+  const makeIcon = (i, dx = 0) => L.divIcon({
+    className: "",
+    html: `<div class="pin">${LETTERS[i]}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18 - dx, 18],
+    popupAnchor: [dx, -18]
+  });
+  markers = UNTERKUENFTE.map((u, i) =>
+    L.marker([u.lat, u.lng], { icon: makeIcon(i), title: u.titel }).addTo(map)
+      .bindPopup(`<strong>${LETTERS[i]} – ${esc(u.titel)}</strong>${esc(u.ort)}<br><a href="#stay-${u.id}">Zur Unterkunft</a>`)
+  );
+
+  // Nahe beieinanderliegende Pins nebeneinander statt übereinander anzeigen.
+  const spreadPins = () => {
+    const placed = [];
+    markers.forEach((m, i) => {
+      const p = map.latLngToLayerPoint(m.getLatLng());
+      let dx = 0;
+      while (placed.some(q => Math.abs(q.x - (p.x + dx)) < 38 && Math.abs(q.y - p.y) < 38)) dx += 40;
+      placed.push({ x: p.x + dx, y: p.y });
+      m.setIcon(makeIcon(i, dx));
+    });
+  };
+  map.on("zoomend", spreadPins);
+  map.fitBounds(L.latLngBounds(UNTERKUENFTE.map(u => [u.lat, u.lng])), { padding: [50, 50], maxZoom: 13 });
+  spreadPins();
+
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-fly]");
+    if (!b) return;
+    const i = Number(b.dataset.fly), u = UNTERKUENFTE[i];
+    $("#karte").scrollIntoView();
+    map.flyTo([u.lat, u.lng], 12, { duration: 1 });
+    markers[i].openPopup();
+  });
+}
+
+/* ---------- Resultate ---------- */
+function renderResults() {
+  const votes = state.votes;
+  const rows = UNTERKUENFTE.map((u, i) => {
+    const vals = votes.map(v => v.ratings?.[u.id]).filter(n => Number.isInteger(n) && n >= 1 && n <= 5);
+    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+    return { u, i, avg, count: vals.length };
+  }).sort((a, b) => b.avg - a.avg || b.count - a.count);
+
+  if (!votes.length) {
+    $("#results").innerHTML = `<div class="empty">Noch keine Stimmen. Bewerte die Unterkünfte oben und speichere als Erste:r.</div>`;
+    $("#voters").textContent = "";
+    return;
+  }
+  $("#results").innerHTML = rows.map((r, pos) => `
+    <div class="res ${pos === 0 && r.count ? "top" : ""}">
+      <span class="pin" aria-hidden="true">${LETTERS[r.i]}</span>
+      <span class="name">${esc(r.u.titel)}</span>
+      <span class="score">${r.count ? r.avg.toFixed(1).replace(".", ",") : "–"}</span>
+      <div class="bar"><span style="width:${(r.avg / 5) * 100}%"></span></div>
+      <small>${r.count} ${r.count === 1 ? "Bewertung" : "Bewertungen"}${pos === 0 && r.count ? " – aktuell auf Platz 1" : ""}</small>
+    </div>`).join("");
+  const names = votes.map(v => esc(v.name)).sort((a, b) => a.localeCompare(b, "de"));
+  $("#voters").innerHTML = `${names.length} ${names.length === 1 ? "Person hat" : "Personen haben"} abgestimmt: ${names.join(", ")}`;
+}
+
+/* ---------- Speicher (Firebase oder Testmodus) ---------- */
+async function initStore(onChange) {
+  if (FIREBASE_CONFIG) {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+    const { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp } =
+      await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    const db = getFirestore(initializeApp(FIREBASE_CONFIG));
+    onSnapshot(collection(db, "votes"),
+      snap => onChange(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      err => setStatus("Stimmen konnten nicht geladen werden: " + err.message));
+    return { save: (id, data) => setDoc(doc(db, "votes", id), { ...data, updated: serverTimestamp() }) };
+  }
+  $("#demo").hidden = false;
+  const KEY = "abschlussreise-demo-votes";
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+  onChange(Object.entries(read()).map(([id, v]) => ({ id, ...v })));
+  return {
+    save: async (id, data) => {
+      const all = read(); all[id] = data;
+      try { localStorage.setItem(KEY, JSON.stringify(all)); } catch {}
+      onChange(Object.entries(all).map(([k, v]) => ({ id: k, ...v })));
+    }
+  };
+}
+
+/* ---------- Name & Abstimmen ---------- */
+function loadMyVote() {
+  const id = slug($("#name").value);
+  if (!id) return;
+  const existing = state.votes.find(v => v.id === id);
+  if (existing && existing.ratings) {
+    state.mine = { ...existing.ratings };
+    paintAll();
+    setStatus("Deine bisherige Stimme ist geladen. Du kannst sie anpassen und neu speichern.");
+  }
+}
+
+$("#name").addEventListener("change", loadMyVote);
+
+$("#voteform").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("#name").value.trim();
+  const id = slug(name);
+  if (!id) { setStatus("Trag zuerst deinen Namen ein."); $("#name").focus(); return; }
+  const ratings = Object.fromEntries(Object.entries(state.mine).filter(([k]) => UNTERKUENFTE.some(u => u.id === k)));
+  if (!Object.keys(ratings).length) { setStatus("Bewerte mindestens eine Unterkunft mit Sonnen."); return; }
+  const missing = UNTERKUENFTE.length - Object.keys(ratings).length;
+  $("#save").disabled = true;
+  setStatus("Wird gespeichert …");
+  try {
+    await state.store.save(id, { name, ratings });
+    try { localStorage.setItem("abschlussreise-name", name); } catch {}
+    setStatus(missing
+      ? `Gespeichert, ${name}! ${missing} ${missing === 1 ? "Unterkunft ist" : "Unterkünfte sind"} noch unbewertet.`
+      : `Gespeichert, danke ${name}! Du kannst deine Stimme jederzeit ändern.`);
+  } catch (err) {
+    setStatus("Speichern hat nicht geklappt: " + err.message);
+  } finally {
+    $("#save").disabled = false;
+  }
+});
+
+/* ---------- Start ---------- */
+renderStays();
+renderMap();
+try { const n = localStorage.getItem("abschlussreise-name"); if (n) $("#name").value = n; } catch {}
+let firstLoad = true;
+state.store = await initStore(votes => {
+  state.votes = votes;
+  renderResults();
+  if (firstLoad) { firstLoad = false; loadMyVote(); }
+});
+</script>
+</body>
+</html>
